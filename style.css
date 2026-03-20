@@ -6,13 +6,13 @@
         }
 
         body {
-            background: radial-gradient(circle at 20% 30%, #0b0d12, #030407);
             font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 2rem 1.5rem;
+            background-image: url(espacio.jpg);
         }
 
         /* contenedor principal elegante */

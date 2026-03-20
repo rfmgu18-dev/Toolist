@@ -11,20 +11,20 @@
 <div class="task-dashboard">
     <div class="stats-header">
         <div class="title-area">
-            <h1>ÆTENDA · ECLIPSE</h1>
+            <h1>LISTA DE TAREAS WOW</h1>
             <div style="font-size: 0.7rem; color:#6c7a92;">control total</div>
         </div>
         <div class="stats-cards">
             <div class="stat-card completed">
-                <span class="stat-label">Completadas</span>
+                <span class="stat-label">Completas</span>
                 <span class="stat-number" id="completedCount">0</span>
             </div>
             <div class="stat-card pending">
-                <span class="stat-label">Pendientes</span>
+                <span class="stat-label">Incompletas</span>
                 <span class="stat-number" id="pendingCount">0</span>
             </div>
             <div class="stat-card">
-                <span class="stat-label">Total</span>
+                <span class="stat-label">Totales</span>
                 <span class="stat-number" id="totalCount">0</span>
             </div>
         </div>
@@ -40,10 +40,15 @@
             <input type="text" id="taskIconInput" placeholder="✨, 📁, 💻, 🎯" value="📋" maxlength="4">
         </div>
         <div class="input-group">
+            <label>📅 FECHA DE LA TAREA</label>
+            <input type="date" id="taskDateInput" rows="1" placeholder="Fecha límite, inicio..."></input>
+        </div>
+        <div class="input-group">
             <label>📝 DESCRIPCIÓN</label>
             <textarea id="taskDescInput" rows="1" placeholder="Detalles, plazos o notas..."></textarea>
         </div>
-        <button class="btn-add" id="addTaskBtn">+ AGREGAR TAREA</button>
+        
+        <button class="btn-add" id="addTaskBtn"> + AGREGAR TAREA</button>
     </div>
 
     <div class="tasks-container">
@@ -54,7 +59,7 @@
     </div>
     <div class="link">
     <hr>
-<h2>Esta lista de tareas fue elaborada por la IA y por:</h2>
+<h4>Esta lista de tareas fue elaborada por la IA y por:</h4>
 <a class="github-link" href="https://github.com/rfmgu18-dev/Toolist.git" target="_blank">Rubén Maldonado</a>
 </div>
 </div>
@@ -99,7 +104,8 @@
             tasks = [
                 { id: '1', name: 'Diseñar interfaz', icon: '🎨', description: 'Prototipo oscuro / glassmorphism', completed: false },
                 { id: '2', name: 'Optimizar rendimiento', icon: '⚡', description: 'Revisar animaciones y carga', completed: true },
-                { id: '3', name: 'Escribir documentación', icon: '📘', description: 'Guía de uso para el usuario', completed: false }
+                { id: '3', name: 'Escribir documentación', icon: '📘', description: 'Guía de uso para el usuario', completed: false },
+                { id: '4', name: 'Cambio de fecha', icon: '📅', description: 'Cambiar la fecha de la tarea', completed: false }
             ];
         }
         renderStatsAndList();
