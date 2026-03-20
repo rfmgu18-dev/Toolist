@@ -1,11 +1,327 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>ÆTENDA · Lista de tareas elegante</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<div class="task-dashboard">
+    <div class="stats-header">
+        <div class="title-area">
+            <h1>ÆTENDA · ECLIPSE</h1>
+            <div style="font-size: 0.7rem; color:#6c7a92;">control total</div>
+        </div>
+        <div class="stats-cards">
+            <div class="stat-card completed">
+                <span class="stat-label">Completadas</span>
+                <span class="stat-number" id="completedCount">0</span>
+            </div>
+            <div class="stat-card pending">
+                <span class="stat-label">Pendientes</span>
+                <span class="stat-number" id="pendingCount">0</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-label">Total</span>
+                <span class="stat-number" id="totalCount">0</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="task-form">
+        <div class="input-group">
+            <label>📌 NOMBRE *</label>
+            <input type="text" id="taskNameInput" placeholder="Ej: Investigación UX" maxlength="70">
+        </div>
+        <div class="input-group">
+            <label>🎨 ÍCONO (emoji)</label>
+            <input type="text" id="taskIconInput" placeholder="✨, 📁, 💻, 🎯" value="📋" maxlength="4">
+        </div>
+        <div class="input-group">
+            <label>📝 DESCRIPCIÓN</label>
+            <textarea id="taskDescInput" rows="1" placeholder="Detalles, plazos o notas..."></textarea>
+        </div>
+        <button class="btn-add" id="addTaskBtn">+ AGREGAR TAREA</button>
+    </div>
+
+    <div class="tasks-container">
+        <div class="tasks-grid" id="tasksList">
+            <!-- las tareas se inyectan dinámicamente -->
+            <div class="empty-message">✨ No hay tareas aún. Crea una con estilo y control absoluto.</div>
+        </div>
+    </div>
+    <div class="link">
+    <hr>
+<h2>Esta lista de tareas fue elaborada por la IA y por:</h2>
+<a class="github-link" href="https://github.com/rfmgu18-dev/Toolist.git" target="_blank">Rubén Maldonado</a>
+</div>
+</div>
+
+<script>
+    // ---------- MODELO DE DATOS ----------
+    let tasks = [];
+
+    // Referencias DOM
+    const tasksListEl = document.getElementById('tasksList');
+    const completedSpan = document.getElementById('completedCount');
+    const pendingSpan = document.getElementById('pendingCount');
+    const totalSpan = document.getElementById('totalCount');
+
+    // Inputs
+    const taskNameInput = document.getElementById('taskNameInput');
+    const taskIconInput = document.getElementById('taskIconInput');
+    const taskDescInput = document.getElementById('taskDescInput');
+    const addBtn = document.getElementById('addTaskBtn');
+
+    // Helper para guardar en localStorage (persistencia elegante)
+    function saveToLocalStorage() {
+        localStorage.setItem('aetenda_tasks', JSON.stringify(tasks));
+    }
+
+    function loadFromLocalStorage() {
+        const stored = localStorage.getItem('aetenda_tasks');
+        if(stored) {
+            try {
+                tasks = JSON.parse(stored);
+                // Aseguramos que cada tarea tenga campos obligatorios por si versiones anteriores
+                tasks = tasks.map(t => ({
+                    id: t.id || Date.now() + Math.random(),
+                    name: t.name || "Sin título",
+                    icon: t.icon && t.icon.length <= 6 ? t.icon : "📌",
+                    description: t.description || "",
+                    completed: t.completed === true
+                }));
+            } catch(e) { tasks = []; }
+        } else {
+            // datos de ejemplo elegantes pero limpios
+            tasks = [
+                { id: '1', name: 'Diseñar interfaz', icon: '🎨', description: 'Prototipo oscuro / glassmorphism', completed: false },
+                { id: '2', name: 'Optimizar rendimiento', icon: '⚡', description: 'Revisar animaciones y carga', completed: true },
+                { id: '3', name: 'Escribir documentación', icon: '📘', description: 'Guía de uso para el usuario', completed: false }
+            ];
+        }
+        renderStatsAndList();
+    }
+
+    // Funciones core
+    function addTask(name, icon, description) {
+        if(!name || name.trim() === "") {
+            // alerta suave integrada
+            taskNameInput.style.borderColor = "#b55a4a";
+            setTimeout(() => { taskNameInput.style.borderColor = "#242b36"; }, 800);
+            return false;
+        }
+        const newTask = {
+            id: Date.now() + '-' + Math.random().toString(36).substr(2, 6),
+            name: name.trim(),
+            icon: icon && icon.trim() !== "" ? icon.trim().substring(0, 4) : "📋",
+            description: description ? description.trim() : "",
+            completed: false
+        };
+        tasks.push(newTask);
+        saveToLocalStorage();
+        renderStatsAndList();
+        return true;
+    }
+
+    function deleteTask(id) {
+        tasks = tasks.filter(task => task.id != id);
+        saveToLocalStorage();
+        renderStatsAndList();
+    }
+
+    function toggleComplete(id) {
+        const task = tasks.find(t => t.id == id);
+        if(task) {
+            task.completed = !task.completed;
+            saveToLocalStorage();
+            renderStatsAndList();
+        }
+    }
+
+    function editTask(id, newName, newIcon, newDesc) {
+        const task = tasks.find(t => t.id == id);
+        if(task) {
+            if(newName && newName.trim() !== "") task.name = newName.trim();
+            if(newIcon && newIcon.trim() !== "") task.icon = newIcon.trim().substring(0,4);
+            else if(newIcon === "") task.icon = "📋";
+            task.description = (newDesc !== undefined) ? newDesc.trim() : task.description;
+            saveToLocalStorage();
+            renderStatsAndList();
+        }
+    }
+
+    // Funcion para edición inline con prompt personalizado (elegante y nativo pero con estilo)
+    function promptEditTask(task) {
+        // Usamos un modal sencillo con prompt pero con decoración de entrada, es más simple y universal.
+        // Para mantener la experiencia "intuitiva", usaremos un cuadro de diálogo personalizado con ventana flotante?
+        // Prefiero usar un modal creado con js pero sin complicar demasiado, pero manteniendo control total.
+        // Implementaremos una mini interfaz de edición con prompt nativo mejorado? usaremos 3 prompts secuenciales (funcional y rápido).
+        // Pero para un control total y elegante, haremos un diálogo modal dinámico sencillo pero limpio.
+        const modalDiv = document.createElement('div');
+        modalDiv.style.position = 'fixed';
+        modalDiv.style.top = '0';
+        modalDiv.style.left = '0';
+        modalDiv.style.width = '100%';
+        modalDiv.style.height = '100%';
+        modalDiv.style.backgroundColor = 'rgba(0,0,0,0.7)';
+        modalDiv.style.backdropFilter = 'blur(8px)';
+        modalDiv.style.display = 'flex';
+        modalDiv.style.alignItems = 'center';
+        modalDiv.style.justifyContent = 'center';
+        modalDiv.style.zIndex = '9999';
+        modalDiv.style.fontFamily = "'Inter', system-ui";
+        
+        const card = document.createElement('div');
+        card.style.backgroundColor = '#11161f';
+        card.style.borderRadius = '2rem';
+        card.style.padding = '1.8rem';
+        card.style.width = '320px';
+        card.style.border = '1px solid #2e3a48';
+        card.style.boxShadow = '0 20px 35px -10px black';
+        
+        card.innerHTML = `
+            <h3 style="margin-bottom:1rem; color:#eef3fc; font-weight:500;">✎ Editar tarea</h3>
+            <label style="color:#9aafcf; font-size:0.7rem;">NOMBRE</label>
+            <input id="editName" value="${escapeHtml(task.name)}" style="width:100%; background:#0a0f16; border:1px solid #2c3643; border-radius:1rem; padding:0.5rem; margin:0.3rem 0 1rem 0; color:white;">
+            <label style="color:#9aafcf; font-size:0.7rem;">ÍCONO (emoji)</label>
+            <input id="editIcon" value="${escapeHtml(task.icon)}" style="width:100%; background:#0a0f16; border:1px solid #2c3643; border-radius:1rem; padding:0.5rem; margin:0.3rem 0 1rem 0; color:white;">
+            <label style="color:#9aafcf; font-size:0.7rem;">DESCRIPCIÓN</label>
+            <textarea id="editDesc" rows="2" style="width:100%; background:#0a0f16; border:1px solid #2c3643; border-radius:1rem; padding:0.5rem; color:white; font-family:inherit;">${escapeHtml(task.description)}</textarea>
+            <div style="display:flex; justify-content:flex-end; gap:0.8rem; margin-top:1.5rem;">
+                <button id="cancelEditBtn" style="background:#1e2632; border:none; border-radius:2rem; padding:0.4rem 1rem; color:#cddae9;">Cancelar</button>
+                <button id="saveEditBtn" style="background:#2b3f54; border:none; border-radius:2rem; padding:0.4rem 1rem; color:white;">Guardar</button>
+            </div>
+        `;
+        
+        modalDiv.appendChild(card);
+        document.body.appendChild(modalDiv);
+        
+        const saveBtn = card.querySelector('#saveEditBtn');
+        const cancelBtn = card.querySelector('#cancelEditBtn');
+        const nameInput = card.querySelector('#editName');
+        const iconInput = card.querySelector('#editIcon');
+        const descInput = card.querySelector('#editDesc');
+        
+        const closeModal = () => modalDiv.remove();
+        saveBtn.onclick = () => {
+            const newName = nameInput.value;
+            const newIcon = iconInput.value;
+            const newDesc = descInput.value;
+            if(newName.trim() === "") {
+                nameInput.style.borderColor = "#b55a4a";
+                return;
+            }
+            editTask(task.id, newName, newIcon, newDesc);
+            closeModal();
+        };
+        cancelBtn.onclick = closeModal;
+        modalDiv.addEventListener('click', (e) => { if(e.target === modalDiv) closeModal(); });
+    }
     
+    function escapeHtml(str) {
+        if(!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if(m === '&') return '&amp;';
+            if(m === '<') return '&lt;';
+            if(m === '>') return '&gt;';
+            return m;
+        }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+            return c;
+        });
+    }
+    
+    // Render completo: estadísticas y lista de tareas
+    function renderStatsAndList() {
+        const completed = tasks.filter(t => t.completed).length;
+        const pending = tasks.filter(t => !t.completed).length;
+        const total = tasks.length;
+        
+        completedSpan.innerText = completed;
+        pendingSpan.innerText = pending;
+        totalSpan.innerText = total;
+        
+        if(tasks.length === 0) {
+            tasksListEl.innerHTML = `<div class="empty-message">🌙 No hay tareas activas. Agrega una con nombre, ícono y descripción personalizada.</div>`;
+            return;
+        }
+        
+        let html = '';
+        tasks.forEach(task => {
+            const statusClass = task.completed ? 'status-completed' : 'status-pending';
+            const statusText = task.completed ? '✓ Realizada' : '○ Pendiente';
+            const iconSafe = task.icon && task.icon !== "" ? task.icon : "📌";
+            const descSafe = task.description ? escapeHtml(task.description) : '<span style="opacity:0.6;">Sin descripción</span>';
+            
+            html += `
+                <div class="task-item" data-id="${task.id}">
+                    <div class="task-main">
+                        <div class="task-header">
+                            <span class="task-icon">${iconSafe}</span>
+                            <span class="task-name">${escapeHtml(task.name)}</span>
+                        </div>
+                        <div class="task-desc">${descSafe}</div>
+                    </div>
+                    <div class="task-actions">
+                        <div class="task-status ${statusClass}">${statusText}</div>
+                        <button class="icon-btn btn-complete" data-action="toggle" title="${task.completed ? 'Marcar pendiente' : 'Completar tarea'}">${task.completed ? '↺' : '✓'}</button>
+                        <button class="icon-btn btn-edit" data-action="edit" title="Editar">✎</button>
+                        <button class="icon-btn btn-delete" data-action="delete" title="Eliminar">🗑</button>
+                    </div>
+                </div>
+            `;
+        });
+        tasksListEl.innerHTML = html;
+        
+        // Asignar event listeners a botones de cada tarea (delegación)
+        document.querySelectorAll('.task-item').forEach(item => {
+            const id = item.getAttribute('data-id');
+            const toggleBtn = item.querySelector('[data-action="toggle"]');
+            const editBtn = item.querySelector('[data-action="edit"]');
+            const deleteBtn = item.querySelector('[data-action="delete"]');
+            
+            if(toggleBtn) toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                toggleComplete(id);
+            });
+            if(editBtn) editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const taskFound = tasks.find(t => t.id == id);
+                if(taskFound) promptEditTask(taskFound);
+            });
+            if(deleteBtn) deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deleteTask(id);
+            });
+        });
+    }
+    
+    // Agregar tarea desde el formulario
+    function handleAddTask() {
+        const name = taskNameInput.value;
+        let icon = taskIconInput.value.trim();
+        if(icon === "") icon = "📋";
+        const desc = taskDescInput.value;
+        const success = addTask(name, icon, desc);
+        if(success) {
+            taskNameInput.value = "";
+            taskIconInput.value = "📋";
+            taskDescInput.value = "";
+            taskNameInput.focus();
+        }
+    }
+    
+    addBtn.addEventListener('click', handleAddTask);
+    // Enter shortcut en campo nombre
+    taskNameInput.addEventListener('keypress', (e) => {
+        if(e.key === 'Enter') handleAddTask();
+    });
+    
+    // Inicializar
+    loadFromLocalStorage();
+</script>
+
 </body>
 </html>
